@@ -11,6 +11,13 @@
 </p>
 
 <p align="center">
+  API documentation for the agent era.<br>
+  Token-optimized <code>llms.txt</code> for AI agents, full markdown for developers, semantic HTML for browsers.<br>
+  One URL, right format, standard HTTP content negotiation.
+</p>
+
+<p align="center">
+  <a href="https://swagent.dev">swagent.dev</a> &middot;
   <a href="#quick-start">Quick Start</a> &middot;
   <a href="#frameworks">Frameworks</a> &middot;
   <a href="#cli">CLI</a> &middot;
@@ -19,19 +26,7 @@
 
 ---
 
-## Why
-
-LLM agents read your docs too. Swagger UI is built for humans clicking through a browser. SWAgent generates three outputs from one OpenAPI spec:
-
-| Output             | For                | What it is                                                                                                                        |
-| ------------------ | ------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| **`llms.txt`**     | AI agents          | Token-optimized compact notation, ~60% smaller than raw JSON                                                                      |
-| **`to-humans.md`** | Developers         | Full markdown reference with ToC, parameter tables, response schemas                                                              |
-| **`index.html`**   | Humans + AI agents | HTML landing for browsers. Send `Accept: text/markdown` and it returns the AI-optimized format directly — no separate URL needed. |
-
-Your API becomes readable by both humans and machines without maintaining separate docs.
-
-### True AI-First: agents just read the URL
+## True AI-First: agents just read the URL
 
 LLM agents don't need to discover `/llms.txt`. The base URL serves the right format automatically:
 
@@ -43,7 +38,25 @@ curl https://api.example.com/
 curl -H "Accept: text/markdown" https://api.example.com/
 ```
 
-When an agent reads your API URL to learn about it, it receives documentation built for machines — compact schemas, minimal tokens, zero noise. No special paths, no discovery step. One URL, right format, standard content negotiation.
+> Tell your AI agent: "Learn https://api.example.com"
+
+No special paths, no discovery step, no configuration. Standard HTTP content negotiation delivers the right format to the right client.
+
+## Why
+
+Your docs are built for humans. LLM agents read them too.
+
+Swagger UI, Redoc, and traditional docs waste thousands of tokens on navigation chrome, repeated schemas, and verbose formatting. Your AI-powered integrations are paying the cost.
+
+SWAgent transforms your OpenAPI spec into three outputs:
+
+| Output             | For                | What it is                                                                                                        |
+| ------------------ | ------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| **`llms.txt`**     | AI agents          | Token-optimized compact notation, ~75% smaller than raw JSON                                                      |
+| **`to-humans.md`** | Developers         | Full markdown reference with ToC, parameter tables, response schemas                                              |
+| **`index.html`**   | Humans + AI agents | Semantic HTML landing for browsers. Send `Accept: text/markdown` and it returns the AI-optimized format directly. |
+
+Your API becomes readable by both humans and machines without maintaining separate docs.
 
 ## What llms.txt looks like
 
@@ -358,7 +371,7 @@ SWAgent compresses your OpenAPI spec into a compact notation designed to minimiz
 | Convention dedup | Common errors defined once, not repeated per endpoint     |
 | Response focus   | Only 200 responses (errors covered by conventions)        |
 
-Result: **~60% smaller** than raw OpenAPI JSON, **~50% smaller** than standard markdown docs.
+Result: **~75% smaller** than raw OpenAPI JSON, **~50% smaller** than standard markdown docs.
 
 ## Configuration
 
