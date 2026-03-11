@@ -19,6 +19,7 @@
 <p align="center">
   <a href="https://swagent.dev">swagent.dev</a> &middot;
   <a href="#quick-start">Quick Start</a> &middot;
+  <a href="#html-landing-page">Demo</a> &middot;
   <a href="#frameworks">Frameworks</a> &middot;
   <a href="#cli">CLI</a> &middot;
   <a href="#configuration">Config</a>
@@ -57,6 +58,20 @@ SWAgent transforms your OpenAPI spec into three outputs:
 | **`index.html`**   | Humans + AI agents | Semantic HTML landing for browsers. Send `Accept: text/markdown` and it returns the AI-optimized format directly. |
 
 Your API becomes readable by both humans and machines without maintaining separate docs.
+
+## HTML landing page
+
+SWAgent generates a zero-dependency semantic HTML landing page for your API — dark theme, categorized endpoints, auth methods, content negotiation built in. No JavaScript, no build step.
+
+<p align="center">
+  <a href="https://api.alloverapps.com">
+    <img src="https://raw.githubusercontent.com/X24Labs/SWAgent/main/assets/html-landing-preview.png" alt="SWAgent HTML landing page — All Over Apps Admin API" width="720">
+  </a>
+</p>
+
+<p align="center">
+  <em>Live example: <a href="https://api.alloverapps.com">api.alloverapps.com</a></em>
+</p>
 
 ## What llms.txt looks like
 
