@@ -65,7 +65,7 @@ SWAgent generates a zero-dependency semantic HTML landing page for your API — 
 
 <p align="center">
   <a href="https://api.alloverapps.com">
-    <img src="https://swagent.dev/all-over-apps-admin-api.png" alt="SWAgent HTML landing page — All Over Apps Admin API" width="720">
+    <img src="https://swagent.dev/shopify-app-preview.png" alt="SWAgent HTML landing page — All Over Apps Admin API" width="720">
   </a>
 </p>
 
