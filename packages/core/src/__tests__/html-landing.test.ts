@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { generateHtmlLanding } from '../core/generators/html-landing.js';
+import { SWAGENT_VERSION } from '../version.js';
 import { sampleSpec, emptySpec, minimalSpec, noAuthSpec } from './fixtures/sample-spec.js';
 
 describe('generateHtmlLanding', () => {
@@ -78,6 +79,18 @@ describe('generateHtmlLanding', () => {
     expect(result).toContain('SWAGENT');
     expect(result).toContain('swagent.dev');
     expect(result).toContain('Powered by');
+  });
+
+  it('shows the SWAGENT version next to the powered-by badge when known', () => {
+    const result = generateHtmlLanding(sampleSpec);
+    expect(SWAGENT_VERSION).toBeTruthy();
+    const pill = `<span class="powered-by-version">v${SWAGENT_VERSION}</span>`;
+    expect(result).toContain(pill);
+    // The pill is rendered inside the .powered-by paragraph (after "SWAGENT").
+    const poweredByIdx = result.indexOf('class="powered-by"');
+    const pillIdx = result.indexOf(pill);
+    expect(poweredByIdx).toBeGreaterThan(-1);
+    expect(pillIdx).toBeGreaterThan(poweredByIdx);
   });
 
   it('handles empty spec', () => {
