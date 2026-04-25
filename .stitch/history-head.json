@@ -1,0 +1,57 @@
+{
+  "v": 1,
+  "jobs": {
+    "build": {
+      "v": 1,
+      "job": "build",
+      "status": "passed",
+      "agent": "claude",
+      "attempts": 1,
+      "errorFirstLine": null,
+      "branch": "release/v.0.1.8",
+      "commitSha": null,
+      "runs": 4,
+      "firstAt": "2026-04-25T01:43:52.695Z",
+      "lastAt": "2026-04-25T02:08:22.128Z"
+    },
+    "typecheck": {
+      "v": 1,
+      "job": "typecheck",
+      "status": "passed",
+      "agent": "claude",
+      "attempts": 1,
+      "errorFirstLine": null,
+      "branch": "feature/26-expand-collapse-responses",
+      "commitSha": null,
+      "runs": 1,
+      "firstAt": "2026-04-25T02:08:22.128Z",
+      "lastAt": "2026-04-25T02:08:22.128Z"
+    },
+    "test:unit": {
+      "v": 1,
+      "job": "test:unit",
+      "status": "passed",
+      "agent": "claude",
+      "attempts": 1,
+      "errorFirstLine": null,
+      "branch": "feature/26-expand-collapse-responses",
+      "commitSha": null,
+      "runs": 1,
+      "firstAt": "2026-04-25T02:08:22.128Z",
+      "lastAt": "2026-04-25T02:08:22.128Z"
+    },
+    "test:integration": {
+      "v": 1,
+      "job": "test:integration",
+      "status": "passed",
+      "agent": "claude",
+      "attempts": 1,
+      "errorFirstLine": null,
+      "branch": "main",
+      "commitSha": null,
+      "runs": 8,
+      "firstAt": "2026-04-25T00:46:37.117Z",
+      "lastAt": "2026-04-25T02:08:22.128Z"
+    }
+  }
+}

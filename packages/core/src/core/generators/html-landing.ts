@@ -1,11 +1,13 @@
-import type { OpenAPISpec, EndpointInfo, SwagentOptions } from '../types.js';
+import type { OpenAPISpec, EndpointInfo, SecuritySchemes, SwagentOptions } from '../types.js';
 import {
   escapeHtml,
   extractFirstParagraph,
   groupPathsByTag,
   formatSecurity,
+  pickPreviewResponse,
   tagToSlug,
 } from '../utils.js';
+import { schemaToJsonHtml } from './compact-schema.js';
 
 /**
  * Generate an AI-First HTML landing page from an OpenAPI spec.
@@ -50,24 +52,26 @@ export function generateHtmlLanding(spec: OpenAPISpec, options: SwagentOptions =
     })
     .join('\n      ');
 
-  // Endpoint reference tables
+  // Endpoint reference: collapsible group → collapsible endpoints with response preview
   let endpointListHtml = '';
   for (const tagName of allTagsOrdered) {
     const endpoints = tagGroups[tagName];
     if (!endpoints || endpoints.length === 0) continue;
     const tagDef = spec.tags?.find((t) => t.name === tagName);
     const slug = tagToSlug(tagName);
-    endpointListHtml += `\n    <section id="group-${slug}">
-      <h2>${escapeHtml(tagName)}</h2>
-      ${tagDef?.description ? `<p>${escapeHtml(tagDef.description)}</p>` : ''}
-      <table>
-        <thead><tr><th>Method</th><th>Path</th><th>Description</th><th>Auth</th></tr></thead>
-        <tbody>`;
+    const tagEsc = escapeHtml(tagName);
+    const tagDesc = tagDef?.description ? `<p class="group-desc">${escapeHtml(tagDef.description)}</p>` : '';
+
+    let endpointsHtml = '';
     for (const ep of endpoints) {
-      endpointListHtml += `\n          <tr><td><code>${ep.method.toUpperCase()}</code></td><td><code>${escapeHtml(ep.path)}</code></td><td>${escapeHtml(ep.summary)}</td><td>${escapeHtml(formatSecurity(ep.security, securitySchemes))}</td></tr>`;
+      endpointsHtml += renderEndpoint(ep, securitySchemes);
     }
-    endpointListHtml += `\n        </tbody>
-      </table>
+
+    endpointListHtml += `\n    <section id="group-${slug}" class="group">
+      <h2>${tagEsc}</h2>
+      ${tagDesc}
+      <ul class="endpoints">${endpointsHtml}
+      </ul>
     </section>`;
   }
 
@@ -113,7 +117,7 @@ export function generateHtmlLanding(spec: OpenAPISpec, options: SwagentOptions =
   const logoSvg = (size: number) =>
     `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><defs><linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#a78bfa"/><stop offset="100%" style="stop-color:#818cf8"/></linearGradient></defs><circle cx="16" cy="16" r="15" fill="url(#sg)"/><path d="M10 10C10 10 8.5 10 8.5 11.5L8.5 14.5C8.5 15.5 7 16 7 16 7 16 8.5 16.5 8.5 17.5L8.5 20.5C8.5 22 10 22 10 22" stroke="#fff" stroke-width="1.8" stroke-linecap="round" fill="none"/><path d="M22 10C22 10 23.5 10 23.5 11.5L23.5 14.5C23.5 15.5 25 16 25 16 25 16 23.5 16.5 23.5 17.5L23.5 20.5C23.5 22 22 22 22 22" stroke="#fff" stroke-width="1.8" stroke-linecap="round" fill="none"/><g transform="translate(16,16)"><line x1="0" y1="-3.5" x2="0" y2="3.5" stroke="#fff" stroke-width="2" stroke-linecap="round"/><line x1="-3" y1="-1.8" x2="3" y2="1.8" stroke="#fff" stroke-width="2" stroke-linecap="round"/><line x1="-3" y1="1.8" x2="3" y2="-1.8" stroke="#fff" stroke-width="2" stroke-linecap="round"/></g></svg>`;
 
-  return `<!DOCTYPE html>
+  const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -379,6 +383,154 @@ export function generateHtmlLanding(spec: OpenAPISpec, options: SwagentOptions =
       border-bottom: 1px solid var(--border);
     }
     section > p { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.75rem; }
+
+    /* Collapsible endpoint inside static group section */
+    :root { interpolate-size: allow-keywords; }
+    section.group { scroll-margin-top: 1.5rem; }
+    .group-desc {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin: 0 0 0.5rem 0;
+    }
+    ul.endpoints {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    details.endpoint {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin: 0.4rem 0;
+      background: var(--surface);
+    }
+    details.endpoint > summary {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.85rem;
+      user-select: none;
+    }
+    details.endpoint > summary::-webkit-details-marker { display: none; }
+    details.endpoint > summary::after {
+      content: '';
+      width: 0.45rem; height: 0.45rem;
+      border-right: 1.5px solid var(--text-muted);
+      border-bottom: 1.5px solid var(--text-muted);
+      transform: rotate(45deg);
+      margin-left: auto;
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+    details.endpoint[open] > summary::after { transform: rotate(225deg); }
+    details.endpoint:hover { border-color: rgba(129, 140, 248, 0.3); }
+    details.endpoint[open] {
+      border-color: rgba(129, 140, 248, 0.4);
+      box-shadow: var(--glow-sm);
+    }
+    .method {
+      display: inline-block;
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      letter-spacing: 0.04em;
+      min-width: 3.4rem;
+      text-align: center;
+      flex-shrink: 0;
+      background: #1c1c20;
+      color: #a1a1aa;
+    }
+    .m-get    { background: #1a2332; color: #93c5fd; }
+    .m-post   { background: #16241b; color: #86efac; }
+    .m-put    { background: #251c12; color: #fcd34d; }
+    .m-patch  { background: #1f1727; color: #d8b4fe; }
+    .m-delete { background: #2a1818; color: #fca5a5; }
+    .ep-path {
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 0.82rem;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+    .ep-summary {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      flex-grow: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .ep-auth {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-family: "SF Mono", "Fira Code", monospace;
+      flex-shrink: 0;
+    }
+    .endpoint-body {
+      padding: 0.75rem 0.9rem 0.9rem;
+      border-top: 1px solid var(--border);
+    }
+    .response-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+      letter-spacing: 0.04em;
+    }
+    .response-meta .status {
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .response-meta .ct {
+      font-family: "SF Mono", "Fira Code", monospace;
+    }
+    .response-empty {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+    pre.response {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.75rem 0.9rem;
+      overflow-x: auto;
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 0.78rem;
+      line-height: 1.55;
+      max-width: 100%;
+    }
+    pre.response code { color: var(--text); }
+    .tk-key   { color: #93c5fd; }
+    .tk-str   { color: #86efac; }
+    .tk-num   { color: #fcd34d; }
+    .tk-bool  { color: #f0abfc; }
+    .tk-punc  { color: var(--text-muted); }
+
+    /* Smooth expand/collapse where supported (Chrome 131+, Safari 18.2+) */
+    details.endpoint::details-content {
+      block-size: 0;
+      overflow: clip;
+      transition: block-size 0.25s ease, content-visibility 0.25s allow-discrete;
+    }
+    details.endpoint[open]::details-content {
+      block-size: auto;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      details.endpoint::details-content { transition: none; }
+      details.endpoint > summary::after { transition: none; }
+    }
+
+    @media (max-width: 640px) {
+      details.endpoint > summary {
+        flex-wrap: wrap;
+      }
+      .ep-path { font-size: 0.78rem; }
+      .ep-summary { width: 100%; flex-basis: 100%; white-space: normal; }
+      pre.response { font-size: 0.72rem; }
+    }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -511,4 +663,36 @@ export function generateHtmlLanding(spec: OpenAPISpec, options: SwagentOptions =
   </footer>
 </body>
 </html>`;
+  return html;
+}
+
+function renderEndpoint(ep: EndpointInfo, securitySchemes: SecuritySchemes | undefined): string {
+  const method = ep.method.toUpperCase();
+  const methodClass = `m-${ep.method.toLowerCase()}`;
+  const pathEsc = escapeHtml(ep.path);
+  const summaryEsc = escapeHtml(ep.summary);
+  const auth = escapeHtml(formatSecurity(ep.security, securitySchemes));
+  const preview = pickPreviewResponse(ep.responses);
+
+  let body: string;
+  if (preview) {
+    const status = escapeHtml(preview.status);
+    const ct = escapeHtml(preview.contentType);
+    body = `<div class="response-meta"><span class="status">${status}</span> <span class="ct">${ct}</span></div>
+            <pre class="response"><code>${schemaToJsonHtml(preview.schema)}</code></pre>`;
+  } else {
+    body = `<div class="response-empty">No response body</div>`;
+  }
+
+  return `\n        <li><details class="endpoint">
+          <summary>
+            <code class="method ${methodClass}">${method}</code>
+            <code class="ep-path">${pathEsc}</code>
+            <span class="ep-summary">${summaryEsc}</span>
+            <span class="ep-auth">${auth}</span>
+          </summary>
+          <div class="endpoint-body" role="region" aria-label="${method} ${pathEsc} response">
+            ${body}
+          </div>
+        </details></li>`;
 }
