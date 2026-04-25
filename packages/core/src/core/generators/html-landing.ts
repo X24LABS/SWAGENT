@@ -1,5 +1,11 @@
 import type { OpenAPISpec, EndpointInfo, SwagentOptions } from '../types.js';
-import { escapeHtml, extractFirstParagraph, groupPathsByTag, formatSecurity } from '../utils.js';
+import {
+  escapeHtml,
+  extractFirstParagraph,
+  groupPathsByTag,
+  formatSecurity,
+  tagToSlug,
+} from '../utils.js';
 
 /**
  * Generate an AI-First HTML landing page from an OpenAPI spec.
@@ -31,14 +37,16 @@ export function generateHtmlLanding(spec: OpenAPISpec, options: SwagentOptions =
     totalEndpoints += (endpoints as EndpointInfo[]).length;
   }
 
-  // Category cards
+  // Category cards (each links to the corresponding endpoint section below)
   const categoryCards = allTagsOrdered
     .filter((tag) => tagGroups[tag] && tagGroups[tag].length > 0)
     .map((tag) => {
       const tagDef = spec.tags?.find((t) => t.name === tag);
       const desc = tagDef?.description ? escapeHtml(tagDef.description) : '';
       const count = tagGroups[tag].length;
-      return `<div class="card"><h3>${escapeHtml(tag)}</h3><p>${desc}</p><span class="badge">${count} endpoints</span></div>`;
+      const slug = tagToSlug(tag);
+      const tagEsc = escapeHtml(tag);
+      return `<a class="card" href="#group-${slug}" aria-label="Jump to ${tagEsc} endpoints"><h3>${tagEsc}</h3><p>${desc}</p><span class="badge">${count} endpoints</span></a>`;
     })
     .join('\n      ');
 
@@ -48,7 +56,8 @@ export function generateHtmlLanding(spec: OpenAPISpec, options: SwagentOptions =
     const endpoints = tagGroups[tagName];
     if (!endpoints || endpoints.length === 0) continue;
     const tagDef = spec.tags?.find((t) => t.name === tagName);
-    endpointListHtml += `\n    <section>
+    const slug = tagToSlug(tagName);
+    endpointListHtml += `\n    <section id="group-${slug}">
       <h2>${escapeHtml(tagName)}</h2>
       ${tagDef?.description ? `<p>${escapeHtml(tagDef.description)}</p>` : ''}
       <table>
@@ -128,6 +137,10 @@ export function generateHtmlLanding(spec: OpenAPISpec, options: SwagentOptions =
       --glow-lg: 0 0 60px rgba(129, 140, 248, 0.15), 0 0 120px rgba(129, 140, 248, 0.08), 0 0 200px rgba(129, 140, 248, 0.04);
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+    }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: var(--bg);
@@ -233,15 +246,23 @@ export function generateHtmlLanding(spec: OpenAPISpec, options: SwagentOptions =
       gap: 1rem;
     }
     .card {
+      display: block;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 1.25rem;
-      transition: border-color 0.2s;
+      color: inherit;
+      text-decoration: none;
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
     }
     .card:hover {
       border-color: rgba(129, 140, 248, 0.3);
       box-shadow: var(--glow-sm);
+      transform: translateY(-1px);
+    }
+    .card:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
     }
     .card h3 { font-size: 1rem; margin-bottom: 0.35rem; }
     .card p { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; }
@@ -350,7 +371,7 @@ export function generateHtmlLanding(spec: OpenAPISpec, options: SwagentOptions =
       margin-bottom: 2rem;
       font-weight: 400;
     }
-    section { margin-bottom: 2rem; }
+    section { margin-bottom: 2rem; scroll-margin-top: 1.5rem; }
     section > h2 {
       font-size: 1.1rem;
       margin-bottom: 0.25rem;
