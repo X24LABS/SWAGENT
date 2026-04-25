@@ -67,15 +67,12 @@ export function generateHtmlLanding(spec: OpenAPISpec, options: SwagentOptions =
       endpointsHtml += renderEndpoint(ep, securitySchemes);
     }
 
-    endpointListHtml += `\n    <details class="group" id="group-${slug}">
-      <summary>
-        <span class="group-title">${tagEsc}</span>
-        <span class="group-count">${endpoints.length} endpoints</span>
-      </summary>
+    endpointListHtml += `\n    <section id="group-${slug}" class="group">
+      <h2>${tagEsc}</h2>
       ${tagDesc}
       <ul class="endpoints">${endpointsHtml}
       </ul>
-    </details>`;
+    </section>`;
   }
 
   // Auth section
@@ -387,52 +384,13 @@ export function generateHtmlLanding(spec: OpenAPISpec, options: SwagentOptions =
     }
     section > p { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.75rem; }
 
-    /* Collapsible group + endpoint */
+    /* Collapsible endpoint inside static group section */
     :root { interpolate-size: allow-keywords; }
-    details.group {
-      margin-bottom: 1rem;
-      scroll-margin-top: 1.5rem;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 0.5rem;
-    }
-    details.group > summary {
-      list-style: none;
-      cursor: pointer;
-      display: flex;
-      align-items: baseline;
-      gap: 0.6rem;
-      padding: 0.5rem 0;
-      user-select: none;
-    }
-    details.group > summary::-webkit-details-marker { display: none; }
-    details.group > summary::before {
-      content: '';
-      display: inline-block;
-      width: 0.5rem; height: 0.5rem;
-      border-right: 1.5px solid var(--text-muted);
-      border-bottom: 1.5px solid var(--text-muted);
-      transform: rotate(-45deg);
-      transition: transform 0.2s;
-      margin-right: 0.15rem;
-      flex-shrink: 0;
-    }
-    details.group[open] > summary::before { transform: rotate(45deg); }
-    .group-title {
-      font-size: 1.1rem;
-      font-weight: 600;
-    }
-    .group-count {
-      margin-left: auto;
-      font-size: 0.72rem;
-      color: var(--accent);
-      background: var(--accent-glow);
-      padding: 0.12rem 0.5rem;
-      border-radius: 999px;
-    }
+    section.group { scroll-margin-top: 1.5rem; }
     .group-desc {
       color: var(--text-muted);
       font-size: 0.85rem;
-      margin: 0 0 0.5rem 1rem;
+      margin: 0 0 0.5rem 0;
     }
     ul.endpoints {
       list-style: none;
@@ -551,22 +509,16 @@ export function generateHtmlLanding(spec: OpenAPISpec, options: SwagentOptions =
     .tk-punc  { color: var(--text-muted); }
 
     /* Smooth expand/collapse where supported (Chrome 131+, Safari 18.2+) */
-    details.group::details-content,
     details.endpoint::details-content {
       block-size: 0;
       overflow: clip;
       transition: block-size 0.25s ease, content-visibility 0.25s allow-discrete;
     }
-    details.group[open]::details-content,
     details.endpoint[open]::details-content {
       block-size: auto;
     }
     @media (prefers-reduced-motion: reduce) {
-      details.group::details-content,
-      details.endpoint::details-content {
-        transition: none;
-      }
-      details.group > summary::before,
+      details.endpoint::details-content { transition: none; }
       details.endpoint > summary::after { transition: none; }
     }
 
