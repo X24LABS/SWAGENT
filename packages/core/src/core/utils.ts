@@ -85,6 +85,16 @@ export function formatSecurity(
   return unique.length > 0 ? unique.join(' or ') : 'Required';
 }
 
+export function tagToSlug(tag: string): string {
+  const base = tag
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return base || 'group';
+}
+
 export function extractParamsByLocation(
   parameters: ParameterObject[],
   location: 'path' | 'query',

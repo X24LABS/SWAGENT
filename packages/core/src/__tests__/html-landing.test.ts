@@ -97,4 +97,41 @@ describe('generateHtmlLanding', () => {
     expect(result).not.toContain('<script>alert');
     expect(result).toContain('&lt;script&gt;');
   });
+
+  it('links summary cards to their endpoint section via anchors', () => {
+    const result = generateHtmlLanding(sampleSpec);
+    // each card is an anchor pointing at a group id
+    expect(result).toContain('<a class="card" href="#group-pets"');
+    expect(result).toContain('<a class="card" href="#group-orders"');
+    // target sections carry matching ids
+    expect(result).toContain('<section id="group-pets">');
+    expect(result).toContain('<section id="group-orders">');
+  });
+
+  it('enables smooth scrolling with reduced-motion fallback', () => {
+    const result = generateHtmlLanding(sampleSpec);
+    expect(result).toContain('scroll-behavior: smooth');
+    expect(result).toContain('prefers-reduced-motion: reduce');
+    // offset so section header is not flush against the viewport top
+    expect(result).toContain('scroll-margin-top');
+  });
+
+  it('slugifies tag names with spaces and accents into safe ids', () => {
+    const spec = {
+      ...sampleSpec,
+      tags: [
+        { name: 'User Accounts', description: 'accounts' },
+        { name: 'Búsqueda', description: 'search' },
+      ],
+      paths: {
+        '/users': { get: { tags: ['User Accounts'], summary: 'list' } },
+        '/search': { get: { tags: ['Búsqueda'], summary: 'search' } },
+      },
+    } as typeof sampleSpec;
+    const result = generateHtmlLanding(spec);
+    expect(result).toContain('href="#group-user-accounts"');
+    expect(result).toContain('id="group-user-accounts"');
+    expect(result).toContain('href="#group-busqueda"');
+    expect(result).toContain('id="group-busqueda"');
+  });
 });
