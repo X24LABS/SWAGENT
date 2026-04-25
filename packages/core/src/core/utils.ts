@@ -2,6 +2,8 @@ import type {
   OpenAPISpec,
   EndpointInfo,
   ParameterObject,
+  ResponseObject,
+  SchemaObject,
   SecurityRequirement,
   SecuritySchemes,
 } from './types.js';
@@ -83,6 +85,43 @@ export function formatSecurity(
 
   const unique = [...new Set(labels)];
   return unique.length > 0 ? unique.join(' or ') : 'Required';
+}
+
+export interface PreviewResponse {
+  status: string;
+  contentType: string;
+  schema: SchemaObject | null;
+}
+
+/**
+ * Pick the response best suited for an inline preview.
+ *
+ * Strategy: first 2xx with `application/json` content. Falls back to any 2xx
+ * with any content. Returns `null` if no 2xx response carries a content body
+ * (treat as `No response body`).
+ */
+export function pickPreviewResponse(
+  responses: Record<string, ResponseObject> | undefined,
+): PreviewResponse | null {
+  if (!responses) return null;
+  const codes = Object.keys(responses).filter((c) => /^2\d\d$/.test(c)).sort();
+  if (codes.length === 0) return null;
+
+  for (const code of codes) {
+    const json = responses[code]?.content?.['application/json'];
+    if (json?.schema) {
+      return { status: code, contentType: 'application/json', schema: json.schema };
+    }
+  }
+  for (const code of codes) {
+    const content = responses[code]?.content;
+    if (!content) continue;
+    const firstType = Object.keys(content)[0];
+    if (firstType && content[firstType]?.schema) {
+      return { status: code, contentType: firstType, schema: content[firstType].schema! };
+    }
+  }
+  return null;
 }
 
 export function tagToSlug(tag: string): string {

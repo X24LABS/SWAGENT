@@ -4,6 +4,7 @@ import type {
   ParameterObject,
   SecuritySchemes,
 } from '../types.js';
+import { escapeHtml } from '../utils.js';
 
 /**
  * Compact schema notation for token-optimized output.
@@ -158,4 +159,81 @@ export function prettySchema(schema: SchemaObject | null, depth: number = 0): st
   }
 
   return schema.type || 'any';
+}
+
+/**
+ * Render a schema as an HTML-escaped JSON-shaped preview with token spans for
+ * syntax highlighting (`tk-key`, `tk-str`, `tk-num`, `tk-bool`, `tk-punc`).
+ *
+ * Leaves print example values when `schema.example` is defined; otherwise a
+ * placeholder by type (`"string"`, `0`, `false`). Recursion is bounded.
+ */
+export function schemaToJsonHtml(schema: SchemaObject | null | undefined, depth: number = 0): string {
+  if (!schema || depth > 4) return tk('punc', '...');
+
+  if (schema.oneOf || schema.anyOf) {
+    const variants = (schema.oneOf || schema.anyOf) as SchemaObject[];
+    return variants.map((v) => schemaToJsonHtml(v, depth + 1)).join(` ${tk('punc', '|')} `);
+  }
+
+  if (schema.type === 'object' || schema.properties) {
+    const props = schema.properties || {};
+    const entries = Object.entries(props);
+    if (entries.length === 0) return `${tk('punc', '{}')}`;
+    const inner = '  '.repeat(depth + 1);
+    const close = '  '.repeat(depth);
+    const lines = entries.map(([key, value]) => {
+      const keyToken = tk('key', `"${escapeHtml(key)}"`);
+      return `${inner}${keyToken}${tk('punc', ':')} ${schemaToJsonHtml(value, depth + 1)}`;
+    });
+    return `${tk('punc', '{')}\n${lines.join(`${tk('punc', ',')}\n`)}\n${close}${tk('punc', '}')}`;
+  }
+
+  if (schema.type === 'array') {
+    const items = schema.items;
+    if (items && (items.type === 'object' || items.properties)) {
+      const inner = '  '.repeat(depth + 1);
+      const close = '  '.repeat(depth);
+      return `${tk('punc', '[')}\n${inner}${schemaToJsonHtml(items, depth + 1)}\n${close}${tk('punc', ']')}`;
+    }
+    return `${tk('punc', '[')}${leafExample(items || { type: 'any' })}${tk('punc', ']')}`;
+  }
+
+  return leafExample(schema);
+}
+
+function leafExample(schema: SchemaObject): string {
+  if (schema.example !== undefined) {
+    return jsonValueToHtml(schema.example);
+  }
+  switch (schema.type) {
+    case 'integer':
+    case 'number':
+      return tk('num', '0');
+    case 'boolean':
+      return tk('bool', 'false');
+    case 'null':
+      return tk('bool', 'null');
+    case 'array':
+      return `${tk('punc', '[')}${tk('str', '"any"')}${tk('punc', ']')}`;
+    default:
+      return tk('str', `"${escapeHtml(schema.type || 'string')}"`);
+  }
+}
+
+function jsonValueToHtml(value: unknown): string {
+  if (value === null) return tk('bool', 'null');
+  if (typeof value === 'boolean') return tk('bool', String(value));
+  if (typeof value === 'number') return tk('num', String(value));
+  if (typeof value === 'string') return tk('str', `"${escapeHtml(value)}"`);
+  // Objects/arrays: best-effort escape via JSON.stringify
+  try {
+    return tk('str', escapeHtml(JSON.stringify(value)));
+  } catch {
+    return tk('str', '"…"');
+  }
+}
+
+function tk(cls: string, content: string): string {
+  return `<span class="tk-${cls}">${content}</span>`;
 }

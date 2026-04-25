@@ -38,11 +38,14 @@ describe('generateHtmlLanding', () => {
     expect(result).toContain('/openapi.json');
   });
 
-  it('includes endpoint tables', () => {
+  it('renders each tag as a collapsible group of endpoints', () => {
     const result = generateHtmlLanding(sampleSpec);
-    expect(result).toContain('<table>');
-    expect(result).toContain('<code>GET</code>');
-    expect(result).toContain('/pets');
+    expect(result).toContain('<details class="group" id="group-pets">');
+    expect(result).toContain('<span class="group-title">Pets</span>');
+    expect(result).toContain('<ul class="endpoints">');
+    expect(result).toContain('<details class="endpoint">');
+    expect(result).toContain('class="method m-get">GET</code>');
+    expect(result).toContain('class="ep-path">/pets</code>');
   });
 
   it('includes authentication section', () => {
@@ -103,9 +106,9 @@ describe('generateHtmlLanding', () => {
     // each card is an anchor pointing at a group id
     expect(result).toContain('<a class="card" href="#group-pets"');
     expect(result).toContain('<a class="card" href="#group-orders"');
-    // target sections carry matching ids
-    expect(result).toContain('<section id="group-pets">');
-    expect(result).toContain('<section id="group-orders">');
+    // target groups carry matching ids
+    expect(result).toContain('id="group-pets"');
+    expect(result).toContain('id="group-orders"');
   });
 
   it('enables smooth scrolling with reduced-motion fallback', () => {
@@ -114,6 +117,81 @@ describe('generateHtmlLanding', () => {
     expect(result).toContain('prefers-reduced-motion: reduce');
     // offset so section header is not flush against the viewport top
     expect(result).toContain('scroll-margin-top');
+  });
+
+  it('renders syntax-highlighted JSON response preview for endpoints with content', () => {
+    const result = generateHtmlLanding(sampleSpec);
+    // Login response: { token: string, expiresIn: number }
+    expect(result).toContain('<div class="response-meta"><span class="status">200</span> <span class="ct">application/json</span></div>');
+    expect(result).toContain('<pre class="response">');
+    expect(result).toContain('<span class="tk-key">"token"</span>');
+    expect(result).toContain('<span class="tk-str">"string"</span>');
+    expect(result).toContain('<span class="tk-num">0</span>');
+  });
+
+  it('shows "No response body" when endpoint has no response content schema', () => {
+    const result = generateHtmlLanding(sampleSpec);
+    // /auth/register returns { '200': { description: 'Created' } } with no content
+    expect(result).toContain('<div class="response-empty">No response body</div>');
+  });
+
+  it('keeps groups and endpoints collapsed by default', () => {
+    const result = generateHtmlLanding(sampleSpec);
+    // No `[open]` attribute on any details element
+    expect(result).not.toMatch(/<details[^>]*\bopen\b/);
+  });
+
+  it('uses native <details>/<summary> instead of JS-driven toggles', () => {
+    const result = generateHtmlLanding(sampleSpec);
+    // Still zero JS; toggle works natively
+    expect(result).not.toContain('<script');
+    expect(result).toContain('<details class="group"');
+    expect(result).toContain('<details class="endpoint">');
+  });
+
+  it('groups have aria-friendly summary structure with method, path, summary, auth', () => {
+    const result = generateHtmlLanding(sampleSpec);
+    expect(result).toContain('class="method m-post">POST</code>');
+    expect(result).toContain('class="ep-path">/auth/login</code>');
+    expect(result).toContain('class="ep-summary">Login</span>');
+    expect(result).toMatch(/role="region" aria-label="GET \/pets response"/);
+  });
+
+  it('animates expand/collapse via interpolate-size with reduced-motion fallback', () => {
+    const result = generateHtmlLanding(sampleSpec);
+    expect(result).toContain('interpolate-size: allow-keywords');
+    expect(result).toContain('::details-content');
+    // reduced-motion already covered, but also disables the details transition
+    expect(result).toMatch(/prefers-reduced-motion: reduce[\s\S]*details\.group::details-content/);
+  });
+
+  it('escapes HTML inside response schema field names', () => {
+    const spec = {
+      ...sampleSpec,
+      paths: {
+        '/danger': {
+          get: {
+            tags: ['Other'],
+            summary: 'XSS check',
+            responses: {
+              '200': {
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'object',
+                      properties: { '<img onerror=x>': { type: 'string' } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    } as typeof sampleSpec;
+    const result = generateHtmlLanding(spec);
+    expect(result).not.toContain('<img onerror=x>');
+    expect(result).toContain('&lt;img onerror=x&gt;');
   });
 
   it('slugifies tag names with spaces and accents into safe ids', () => {
