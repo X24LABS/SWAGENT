@@ -4,6 +4,7 @@ import {
   formatSecurityCompact,
   formatQueryCompact,
   prettySchema,
+  schemaToJsonHtml,
 } from '../core/generators/compact-schema.js';
 
 describe('compactSchema', () => {
@@ -202,5 +203,87 @@ describe('prettySchema', () => {
 
   it('returns ... for null', () => {
     expect(prettySchema(null)).toBe('...');
+  });
+});
+
+describe('schemaToJsonHtml', () => {
+  it('renders an object with key/string/number tokens', () => {
+    const html = schemaToJsonHtml({
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        age: { type: 'integer' },
+      },
+    });
+    expect(html).toContain('<span class="tk-key">"id"</span>');
+    expect(html).toContain('<span class="tk-str">"string"</span>');
+    expect(html).toContain('<span class="tk-num">0</span>');
+  });
+
+  it('uses provided example over the type placeholder', () => {
+    const html = schemaToJsonHtml({
+      type: 'object',
+      properties: { status: { type: 'string', example: 'ok' } },
+    });
+    expect(html).toContain('<span class="tk-str">"ok"</span>');
+    expect(html).not.toContain('<span class="tk-str">"string"</span>');
+  });
+
+  it('renders booleans and arrays of primitives', () => {
+    const html = schemaToJsonHtml({
+      type: 'object',
+      properties: {
+        active: { type: 'boolean' },
+        tags: { type: 'array', items: { type: 'string' } },
+      },
+    });
+    expect(html).toContain('<span class="tk-bool">false</span>');
+    expect(html).toContain('<span class="tk-punc">[</span><span class="tk-str">"string"</span><span class="tk-punc">]</span>');
+  });
+
+  it('renders arrays of objects with nested keys', () => {
+    const html = schemaToJsonHtml({
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { id: { type: 'string' } },
+      },
+    });
+    expect(html).toContain('<span class="tk-punc">[</span>');
+    expect(html).toContain('<span class="tk-key">"id"</span>');
+    expect(html).toContain('<span class="tk-punc">]</span>');
+  });
+
+  it('escapes HTML in property names and string examples', () => {
+    const html = schemaToJsonHtml({
+      type: 'object',
+      properties: {
+        '<x>': { type: 'string', example: '<script>' },
+      },
+    });
+    expect(html).not.toContain('<script>');
+    expect(html).toContain('&lt;x&gt;');
+    expect(html).toContain('&lt;script&gt;');
+  });
+
+  it('returns ... for null and bails at depth > 4', () => {
+    expect(schemaToJsonHtml(null)).toContain('...');
+    // 6 nested levels — bails by depth 5
+    let nested: any = { type: 'string' };
+    for (let i = 0; i < 6; i++) nested = { type: 'object', properties: { nested } };
+    const html = schemaToJsonHtml(nested);
+    expect(html).toContain('...');
+  });
+
+  it('renders oneOf as union of variants', () => {
+    const html = schemaToJsonHtml({
+      oneOf: [
+        { type: 'object', properties: { kind: { type: 'string' } } },
+        { type: 'object', properties: { code: { type: 'integer' } } },
+      ],
+    });
+    expect(html).toContain('<span class="tk-key">"kind"</span>');
+    expect(html).toContain('<span class="tk-key">"code"</span>');
+    expect(html).toContain('<span class="tk-punc">|</span>');
   });
 });
