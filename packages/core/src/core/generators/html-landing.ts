@@ -8,6 +8,7 @@ import {
   tagToSlug,
 } from '../utils.js';
 import { schemaToJsonHtml } from './compact-schema.js';
+import { SWAGENT_VERSION } from '../../version.js';
 
 /**
  * Generate an AI-First HTML landing page from an OpenAPI spec.
@@ -667,6 +668,16 @@ export function generateHtmlLanding(spec: OpenAPISpec, options: SwagentOptions =
     }
     .powered-by a:hover { color: var(--accent); }
     .powered-by svg { flex-shrink: 0; }
+    .powered-by-version {
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 0.7rem;
+      padding: 0.05rem 0.35rem;
+      margin-left: 0.3rem;
+      border-radius: 3px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
   </style>
 </head>
 <body>
@@ -722,7 +733,7 @@ export function generateHtmlLanding(spec: OpenAPISpec, options: SwagentOptions =
 
   <footer>
     <p>${projectName} v${version}</p>
-    <p class="powered-by">Powered by <a href="https://swagent.dev" target="_blank" rel="noopener">${logoSvg(16)} SWAGENT</a></p>
+    <p class="powered-by">Powered by <a href="https://swagent.dev" target="_blank" rel="noopener">${logoSvg(16)} SWAGENT${SWAGENT_VERSION ? ` <span class="powered-by-version">v${escapeHtml(SWAGENT_VERSION)}</span>` : ''}</a></p>
   </footer>
 </body>
 </html>`;
