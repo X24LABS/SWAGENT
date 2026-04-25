@@ -38,14 +38,16 @@ describe('generateHtmlLanding', () => {
     expect(result).toContain('/openapi.json');
   });
 
-  it('renders each tag as a collapsible group of endpoints', () => {
+  it('renders each tag as a static section containing collapsible endpoints', () => {
     const result = generateHtmlLanding(sampleSpec);
-    expect(result).toContain('<details class="group" id="group-pets">');
-    expect(result).toContain('<span class="group-title">Pets</span>');
+    expect(result).toContain('<section id="group-pets" class="group">');
+    expect(result).toContain('<h2>Pets</h2>');
     expect(result).toContain('<ul class="endpoints">');
     expect(result).toContain('<details class="endpoint">');
     expect(result).toContain('class="method m-get">GET</code>');
     expect(result).toContain('class="ep-path">/pets</code>');
+    // Service-level toggle removed: the heading is not a <summary>
+    expect(result).not.toContain('<details class="group"');
   });
 
   it('includes authentication section', () => {
@@ -135,17 +137,16 @@ describe('generateHtmlLanding', () => {
     expect(result).toContain('<div class="response-empty">No response body</div>');
   });
 
-  it('keeps groups and endpoints collapsed by default', () => {
+  it('keeps every endpoint collapsed by default', () => {
     const result = generateHtmlLanding(sampleSpec);
-    // No `[open]` attribute on any details element
+    // No `[open]` attribute on any <details> element
     expect(result).not.toMatch(/<details[^>]*\bopen\b/);
   });
 
   it('uses native <details>/<summary> instead of JS-driven toggles', () => {
     const result = generateHtmlLanding(sampleSpec);
-    // Still zero JS; toggle works natively
+    // Still zero JS; toggle works natively at the endpoint level
     expect(result).not.toContain('<script');
-    expect(result).toContain('<details class="group"');
     expect(result).toContain('<details class="endpoint">');
   });
 
@@ -157,12 +158,12 @@ describe('generateHtmlLanding', () => {
     expect(result).toMatch(/role="region" aria-label="GET \/pets response"/);
   });
 
-  it('animates expand/collapse via interpolate-size with reduced-motion fallback', () => {
+  it('animates endpoint expand/collapse via interpolate-size with reduced-motion fallback', () => {
     const result = generateHtmlLanding(sampleSpec);
     expect(result).toContain('interpolate-size: allow-keywords');
-    expect(result).toContain('::details-content');
-    // reduced-motion already covered, but also disables the details transition
-    expect(result).toMatch(/prefers-reduced-motion: reduce[\s\S]*details\.group::details-content/);
+    expect(result).toContain('details.endpoint::details-content');
+    // reduced-motion disables the endpoint transition
+    expect(result).toMatch(/prefers-reduced-motion: reduce[\s\S]*details\.endpoint::details-content/);
   });
 
   it('escapes HTML inside response schema field names', () => {
