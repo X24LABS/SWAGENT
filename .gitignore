@@ -2,3 +2,7 @@ node_modules/
 dist/
 *.tsbuildinfo
 tmp/
+
+# stitch local tracker (process lock + run history, never repo-relevant)
+.stitch.lock
+.stitch/
