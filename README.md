@@ -485,15 +485,15 @@ Every adapter serves the same four routes by default:
 
 | Package                                | Description          | Peer deps                                  |
 | -------------------------------------- | -------------------- | ------------------------------------------ |
-| [`@swagent/core`](packages/core)       | Generators and types | none                                       |
-| [`@swagent/fastify`](packages/fastify) | Fastify plugin       | `fastify >=4`                              |
-| [`@swagent/express`](packages/express) | Express middleware   | `express >=5`                              |
-| [`@swagent/hono`](packages/hono)       | Hono middleware      | `hono >=4`                                 |
-| [`@swagent/elysia`](packages/elysia)   | Elysia plugin        | `elysia >=1.4`                             |
-| [`@swagent/koa`](packages/koa)         | Koa middleware       | `koa >=2`, `@koa/router >=12`              |
-| [`@swagent/h3`](packages/h3)           | h3 middleware        | `h3 ^1.13`                                 |
-| [`@swagent/nestjs`](packages/nestjs)   | NestJS module        | `@nestjs/common >=10`, `@nestjs/core >=10` |
-| [`swagent`](packages/cli)              | CLI tool             | none                                       |
+| [`@swagent/core`](https://github.com/X24Labs/SWAGENT/tree/main/packages/core)       | Generators and types | none                                       |
+| [`@swagent/fastify`](https://github.com/X24Labs/SWAGENT/tree/main/packages/fastify) | Fastify plugin       | `fastify >=4`                              |
+| [`@swagent/express`](https://github.com/X24Labs/SWAGENT/tree/main/packages/express) | Express middleware   | `express >=5`                              |
+| [`@swagent/hono`](https://github.com/X24Labs/SWAGENT/tree/main/packages/hono)       | Hono middleware      | `hono >=4`                                 |
+| [`@swagent/elysia`](https://github.com/X24Labs/SWAGENT/tree/main/packages/elysia)   | Elysia plugin        | `elysia >=1.4`                             |
+| [`@swagent/koa`](https://github.com/X24Labs/SWAGENT/tree/main/packages/koa)         | Koa middleware       | `koa >=2`, `@koa/router >=12`              |
+| [`@swagent/h3`](https://github.com/X24Labs/SWAGENT/tree/main/packages/h3)           | h3 middleware        | `h3 ^1.13`                                 |
+| [`@swagent/nestjs`](https://github.com/X24Labs/SWAGENT/tree/main/packages/nestjs)   | NestJS module        | `@nestjs/common >=10`, `@nestjs/core >=10` |
+| [`swagent`](https://github.com/X24Labs/SWAGENT/tree/main/packages/cli)              | CLI tool             | none                                       |
 
 ## Development
 
