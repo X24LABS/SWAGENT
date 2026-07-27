@@ -1,4 +1,11 @@
-import type { OpenAPISpec, EndpointInfo, ResolvedRoutes, SecuritySchemes, SwagentOptions } from '../types.js';
+import type {
+  OpenAPISpec,
+  EndpointInfo,
+  ParameterObject,
+  ResolvedRoutes,
+  SecuritySchemes,
+  SwagentOptions,
+} from '../types.js';
 import {
   escapeHtml,
   extractFirstParagraph,
@@ -35,9 +42,7 @@ export function generateHtmlLanding(
   const description = escapeHtml(extractFirstParagraph(spec.info?.description || ''));
   const tagGroups = groupPathsByTag(spec);
   // groupPathsByTag returns tags sorted A-Z; iterate that order.
-  const allTagsOrdered: string[] = Object.keys(tagGroups).filter(
-    (t) => tagGroups[t]?.length > 0,
-  );
+  const allTagsOrdered: string[] = Object.keys(tagGroups).filter((t) => tagGroups[t]?.length > 0);
   const securitySchemes = spec.components?.securitySchemes;
   const promptText = `Learn ${baseUrl}`;
 
@@ -86,7 +91,9 @@ export function generateHtmlLanding(
     const tagDef = spec.tags?.find((t) => t.name === tagName);
     const slug = tagToSlug(tagName);
     const tagEsc = escapeHtml(tagName);
-    const tagDesc = tagDef?.description ? `<p class="group-desc">${escapeHtml(tagDef.description)}</p>` : '';
+    const tagDesc = tagDef?.description
+      ? `<p class="group-desc">${escapeHtml(tagDef.description)}</p>`
+      : '';
 
     let endpointsHtml = '';
     for (const ep of endpoints) {
@@ -582,6 +589,33 @@ export function generateHtmlLanding(
       color: var(--text-muted);
       font-style: italic;
     }
+    .ep-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.6rem;
+    }
+    .ep-section-title {
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin: 0.9rem 0 0.45rem;
+    }
+    .endpoint-body > .ep-section-title:first-child { margin-top: 0; }
+    .ep-authline {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+    .ep-authline strong { color: var(--text); font-weight: 600; }
+    table.params { margin: 0 0 0.75rem; }
+    table.params td {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+    table.params code.param-name { color: var(--accent); }
+    .param-required { color: #fcd34d; }
     .badge-deprecated {
       font-size: 0.62rem;
       font-weight: 600;
@@ -832,7 +866,10 @@ export function generateHtmlLanding(
 }
 
 function endpointUid(ep: EndpointInfo): string {
-  const path = ep.path.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const path = ep.path
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
   return `e-${ep.method.toLowerCase()}-${path}`;
 }
 
@@ -887,6 +924,19 @@ function renderEndpoint(ep: EndpointInfo, securitySchemes: SecuritySchemes | und
             </div>`;
   }
 
+  const descriptionHtml =
+    ep.description && ep.description !== ep.summary
+      ? `<p class="ep-desc">${escapeHtml(ep.description)}</p>
+            `
+      : '';
+  const bodySchemaHtml = ep.body
+    ? `<div class="response-meta">Body <span class="ct">${escapeHtml(ep.bodyContentType || 'application/json')}</span></div>
+            <pre class="response"><code>${schemaToJsonHtml(ep.body)}</code></pre>`
+    : '';
+  const requestHtml = `<div class="ep-section-title">Request</div>
+            <div class="ep-authline">Auth: <strong>${auth}</strong></div>
+            ${renderParamsTable(ep.parameters)}${bodySchemaHtml}`;
+
   return `\n        <li><details class="endpoint${deprecatedClass}">
           <summary>
             <code class="method ${methodClass}">${method}</code>
@@ -895,10 +945,46 @@ function renderEndpoint(ep: EndpointInfo, securitySchemes: SecuritySchemes | und
             ${deprecatedBadge}
             <span class="ep-auth">${auth}</span>
           </summary>
-          <div class="endpoint-body" role="region" aria-label="${method} ${pathEsc} responses">
+          <div class="endpoint-body" role="region" aria-label="${method} ${pathEsc} specification">
+            ${descriptionHtml}${requestHtml}
+            <div class="ep-section-title">Responses</div>
             ${body}
           </div>
         </details></li>`;
+}
+
+const PARAM_LOCATION_ORDER: Record<string, number> = { path: 0, query: 1, header: 2, cookie: 3 };
+
+function paramType(p: ParameterObject): string {
+  const s = p.schema;
+  if (!s) return 'string';
+  if (s.type === 'array') return `${s.items?.type || 'any'}[]`;
+  return s.type || 'string';
+}
+
+/**
+ * Full parameter table for the expanded endpoint panel. Lists every declared
+ * parameter (path first, then query/header/cookie) with type, required flag
+ * and description. Path params are always required per the OpenAPI spec.
+ */
+function renderParamsTable(parameters: ParameterObject[]): string {
+  if (!parameters || parameters.length === 0) return '';
+  const sorted = [...parameters].sort(
+    (a, b) => (PARAM_LOCATION_ORDER[a.in] ?? 9) - (PARAM_LOCATION_ORDER[b.in] ?? 9),
+  );
+  const rows = sorted
+    .map((p) => {
+      const required = p.required === true || p.in === 'path';
+      const desc = p.description || p.schema?.description || '';
+      const reqCell = required ? '<span class="param-required">yes</span>' : 'no';
+      return `<tr><td><code class="param-name">${escapeHtml(p.name)}</code></td><td>${escapeHtml(p.in)}</td><td>${escapeHtml(paramType(p))}</td><td>${reqCell}</td><td>${escapeHtml(desc)}</td></tr>`;
+    })
+    .join('\n              ');
+  return `<table class="params">
+              <thead><tr><th>Name</th><th>In</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+            `;
 }
 
 function statusClass(status: string): string {

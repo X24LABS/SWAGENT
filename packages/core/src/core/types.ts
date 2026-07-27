@@ -59,6 +59,8 @@ export interface EndpointInfo {
   security: SecurityRequirement[] | undefined;
   parameters: ParameterObject[];
   body: SchemaObject | null;
+  /** Content type of the request body when present (e.g. 'application/json'). */
+  bodyContentType?: string | null;
   responses: Record<string, ResponseObject>;
 }
 
