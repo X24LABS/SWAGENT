@@ -110,7 +110,10 @@ describe('generateHtmlLanding', () => {
   });
 
   it('escapes HTML in title', () => {
-    const spec = { ...sampleSpec, info: { ...sampleSpec.info, title: '<script>alert(1)</script>' } };
+    const spec = {
+      ...sampleSpec,
+      info: { ...sampleSpec.info, title: '<script>alert(1)</script>' },
+    };
     const result = generateHtmlLanding(spec);
     expect(result).not.toContain('<script>alert');
     expect(result).toContain('&lt;script&gt;');
@@ -137,7 +140,9 @@ describe('generateHtmlLanding', () => {
   it('renders syntax-highlighted JSON response preview for endpoints with content', () => {
     const result = generateHtmlLanding(sampleSpec);
     // Login response: { token: string, expiresIn: number }
-    expect(result).toContain('<div class="response-meta"><span class="status">200</span> <span class="ct">application/json</span></div>');
+    expect(result).toContain(
+      '<div class="response-meta"><span class="status">200</span> <span class="ct">application/json</span></div>',
+    );
     expect(result).toContain('<pre class="response">');
     expect(result).toContain('<span class="tk-key">"token"</span>');
     expect(result).toContain('<span class="tk-str">"string"</span>');
@@ -168,7 +173,7 @@ describe('generateHtmlLanding', () => {
     expect(result).toContain('class="method m-post">POST</code>');
     expect(result).toContain('class="ep-path">/auth/login</code>');
     expect(result).toContain('class="ep-summary">Login</span>');
-    expect(result).toMatch(/role="region" aria-label="GET \/pets responses"/);
+    expect(result).toMatch(/role="region" aria-label="GET \/pets specification"/);
   });
 
   it('animates endpoint expand/collapse via interpolate-size with reduced-motion fallback', () => {
@@ -176,7 +181,9 @@ describe('generateHtmlLanding', () => {
     expect(result).toContain('interpolate-size: allow-keywords');
     expect(result).toContain('details.endpoint::details-content');
     // reduced-motion disables the endpoint transition
-    expect(result).toMatch(/prefers-reduced-motion: reduce[\s\S]*details\.endpoint::details-content/);
+    expect(result).toMatch(
+      /prefers-reduced-motion: reduce[\s\S]*details\.endpoint::details-content/,
+    );
   });
 
   it('escapes HTML inside response schema field names', () => {
@@ -312,9 +319,11 @@ describe('generateHtmlLanding', () => {
   it('keeps the single-panel layout when only one response has content', () => {
     const result = generateHtmlLanding(sampleSpec);
     // /pets/{petId} has only a 200 response → no tabs UI for that endpoint
-    expect(result).toContain('aria-label="GET /pets/{petId} responses"');
+    expect(result).toContain('aria-label="GET /pets/{petId} specification"');
     // The /pets/{petId} block should not contain resp-tabs (search inside the block)
-    const block = result.match(/aria-label="GET \/pets\/\{petId\} responses"[\s\S]*?<\/details><\/li>/);
+    const block = result.match(
+      /aria-label="GET \/pets\/\{petId\} specification"[\s\S]*?<\/details><\/li>/,
+    );
     expect(block).not.toBeNull();
     expect(block![0]).not.toContain('resp-tabs');
   });
@@ -323,6 +332,131 @@ describe('generateHtmlLanding', () => {
     const result = generateHtmlLanding(sampleSpec);
     expect(result).toContain('.resp-r-0:checked ~ .resp-panels .resp-p-0');
     expect(result).toContain('.resp-r-5:checked ~ .resp-panels .resp-p-5');
+  });
+});
+
+describe('full endpoint specification panel', () => {
+  const endpointBlock = (html: string, method: string, path: string): string => {
+    const escaped = path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const match = html.match(
+      new RegExp(`aria-label="${method} ${escaped} specification"[\\s\\S]*?<\\/details><\\/li>`),
+    );
+    expect(match).not.toBeNull();
+    return match![0];
+  };
+
+  it('renders Request and Responses section titles inside each panel', () => {
+    const result = generateHtmlLanding(sampleSpec);
+    const block = endpointBlock(result, 'GET', '/pets');
+    expect(block).toContain('<div class="ep-section-title">Request</div>');
+    expect(block).toContain('<div class="ep-section-title">Responses</div>');
+  });
+
+  it('renders the query parameters table with name, type, required and description', () => {
+    const result = generateHtmlLanding(sampleSpec);
+    // GET /pets declares page, limit, species query params
+    const block = endpointBlock(result, 'GET', '/pets');
+    expect(block).toContain('<table class="params">');
+    expect(block).toContain(
+      '<th>Name</th><th>In</th><th>Type</th><th>Required</th><th>Description</th>',
+    );
+    expect(block).toContain(
+      '<code class="param-name">page</code></td><td>query</td><td>integer</td><td>no</td><td>Page number</td>',
+    );
+    expect(block).toContain('<code class="param-name">species</code>');
+  });
+
+  it('renders path parameters as required', () => {
+    const result = generateHtmlLanding(sampleSpec);
+    const block = endpointBlock(result, 'GET', '/pets/{petId}');
+    expect(block).toContain(
+      '<code class="param-name">petId</code></td><td>path</td><td>string</td><td><span class="param-required">yes</span></td>',
+    );
+  });
+
+  it('lists path params before query params', () => {
+    const spec = {
+      ...sampleSpec,
+      paths: {
+        '/things/{id}': {
+          get: {
+            tags: ['Other'],
+            summary: 'Get thing',
+            parameters: [
+              { name: 'verbose', in: 'query' as const, schema: { type: 'boolean' } },
+              { name: 'id', in: 'path' as const, required: true, schema: { type: 'string' } },
+            ],
+            responses: { '200': { description: 'OK' } },
+          },
+        },
+      },
+    } as typeof sampleSpec;
+    const result = generateHtmlLanding(spec);
+    const block = endpointBlock(result, 'GET', '/things/{id}');
+    expect(block.indexOf('param-name">id<')).toBeLessThan(block.indexOf('param-name">verbose<'));
+  });
+
+  it('renders the request body schema with its content type', () => {
+    const result = generateHtmlLanding(sampleSpec);
+    // POST /auth/login body: { email*, password* }
+    const block = endpointBlock(result, 'POST', '/auth/login');
+    expect(block).toContain('Body <span class="ct">application/json</span>');
+    expect(block).toContain('<span class="tk-key">"email"</span>');
+    expect(block).toContain('<span class="tk-key">"password"</span>');
+  });
+
+  it('shows the full auth requirement inside the expanded panel', () => {
+    const result = generateHtmlLanding(sampleSpec);
+    // GET /pets/{petId} accepts bearer or API key
+    const block = endpointBlock(result, 'GET', '/pets/{petId}');
+    expect(block).toContain(
+      'Auth: <strong>Bearer Token (JWT) or API Key (header: X-API-Key)</strong>',
+    );
+    // Public endpoints state it explicitly
+    const health = endpointBlock(result, 'GET', '/health');
+    expect(health).toContain('Auth: <strong>None required</strong>');
+  });
+
+  it('renders the endpoint description when it differs from the summary', () => {
+    const result = generateHtmlLanding(sampleSpec);
+    const block = endpointBlock(result, 'GET', '/pets');
+    expect(block).toContain('<p class="ep-desc">Get all pets with optional filtering</p>');
+  });
+
+  it('omits params table and body when the endpoint declares none', () => {
+    const result = generateHtmlLanding(minimalSpec);
+    const block = endpointBlock(result, 'GET', '/ping');
+    expect(block).not.toContain('<table class="params">');
+    expect(block).not.toContain('Body <span class="ct">');
+    // Request section still present (shows auth)
+    expect(block).toContain('<div class="ep-section-title">Request</div>');
+  });
+
+  it('escapes HTML in parameter names and descriptions', () => {
+    const spec = {
+      ...sampleSpec,
+      paths: {
+        '/danger': {
+          get: {
+            tags: ['Other'],
+            summary: 'XSS check',
+            parameters: [
+              {
+                name: '<img onerror=x>',
+                in: 'query' as const,
+                schema: { type: 'string' },
+                description: '<script>alert(1)</script>',
+              },
+            ],
+            responses: { '200': { description: 'OK' } },
+          },
+        },
+      },
+    } as typeof sampleSpec;
+    const result = generateHtmlLanding(spec);
+    expect(result).not.toContain('<img onerror=x>');
+    expect(result).not.toContain('<script>alert');
+    expect(result).toContain('&lt;img onerror=x&gt;');
   });
 });
 

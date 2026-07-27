@@ -63,6 +63,8 @@ Your API becomes readable by both humans and machines without maintaining separa
 
 SWAGENT generates a zero-dependency semantic HTML landing page for your API — dark theme, categorized endpoints, auth methods, content negotiation built in. No JavaScript, no build step.
 
+Each endpoint expands into its full specification: HTTP method, path, parameter tables (path/query/header), request body schema with content type, authentication requirements, and example responses per status code. Everything is rendered from the same OpenAPI spec served at `/openapi.json`, so the docs never drift from the implementation.
+
 <p align="center">
   <a href="https://api.alloverapps.com">
     <img src="https://swagent.dev/shopify-app-preview.png" alt="SWAGENT HTML landing page — All Over Apps Admin API" width="720">

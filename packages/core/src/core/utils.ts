@@ -41,6 +41,8 @@ export function groupPathsByTag(spec: OpenAPISpec): Record<string, EndpointInfo[
       if (!HTTP_METHODS.includes(method as (typeof HTTP_METHODS)[number])) continue;
 
       const tags = operation.tags || ['Other'];
+      const jsonBody = operation.requestBody?.content?.['application/json']?.schema;
+      const formBody = operation.requestBody?.content?.['multipart/form-data']?.schema;
 
       for (const tag of tags) {
         if (!groups[tag]) groups[tag] = [];
@@ -53,10 +55,8 @@ export function groupPathsByTag(spec: OpenAPISpec): Record<string, EndpointInfo[
           deprecated: operation.deprecated === true,
           security: (operation.security ?? spec.security) as SecurityRequirement[] | undefined,
           parameters: (operation.parameters || []) as ParameterObject[],
-          body:
-            operation.requestBody?.content?.['application/json']?.schema ||
-            operation.requestBody?.content?.['multipart/form-data']?.schema ||
-            null,
+          body: jsonBody || formBody || null,
+          bodyContentType: jsonBody ? 'application/json' : formBody ? 'multipart/form-data' : null,
           responses: (operation.responses || {}) as Record<string, any>,
         });
       }
@@ -130,7 +130,9 @@ export function pickPreviewResponse(
   responses: Record<string, ResponseObject> | undefined,
 ): PreviewResponse | null {
   if (!responses) return null;
-  const codes = Object.keys(responses).filter((c) => /^2\d\d$/.test(c)).sort();
+  const codes = Object.keys(responses)
+    .filter((c) => /^2\d\d$/.test(c))
+    .sort();
   if (codes.length === 0) return null;
 
   for (const code of codes) {
